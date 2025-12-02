@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datathon-Demo</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.170.0/build/three.module.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from "three";
+
+        //出力サイズの設定
+        const width = 800;
+        const height = 500;
+
+        // レンダラーを作成
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#myCanvas')
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // シーンを作成
+        const scene = new THREE.Scene();
+
+        // カメラを作成
+        //PerspectiveCamera(視野角, アスペクト比, 開始距離, 終了距離);
+        const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+        // カメラの初期座標を設定（X座標, Y座標, Z座標）
+        camera.position.set(0, 0, 3);
+
+        // レンダリング
+        renderer.render(scene, camera);
+
+    </script>
+</head>
+<body>
+    <canvas id ="myCanvas"></canvas> 
+    <a href="../">サンプルコード一覧へもどる</a>
+</body>
+</html>
+

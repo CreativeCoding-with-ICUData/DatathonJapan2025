@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>ICUデータ可視化</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { csv } from "//cdn.skypack.dev/d3-fetch@3";   // 複数CSV読み込み簡略化モジュール
+
+
+        // CSV読み込み ------------------------------------------------------------------
+        const k6e_data_fp = "./data/filled_k6eTFGcJxyuRnDeNMT5NwDCvQn8=.csv";
+        const RIO_data_fp = "./data/filled_RIOkzacHmHz8GhUb2oHUbkzcun0=.csv";
+        const normal_range_data_fp = "./data/vital_v300_normalRanges.csv";
+
+        Promise.all([
+            csv(k6e_data_fp),
+            csv(RIO_data_fp),
+            csv(normal_range_data_fp)
+        ])
+        .then((filesArray) => {
+            window.csvFilesObj = {
+                k6e: filesArray[0],
+                RIO: filesArray[1],
+                normalRange: filesArray[2]
+            };
+            console.log(csvFilesObj);
+            
+        })
+        .catch((err) => {
+            // handle error here
+        });
+        // ------------------------------------------------------------------------------
+
+
+
+    </script>
+</head>
+
+<body>
+    <!-- <div id = "mouseInfo">
+    マウス操作<br>
+    スクロール：ズームイン・アウト<br>
+    左ドラッグ：回転<br>
+    右ドラック：移動<br>
+    </div> -->
+
+    <div id="three-canvas"></div>
+    <a href="../">サンプルコード一覧へもどる</a>
+</body>
+
+</html>
+

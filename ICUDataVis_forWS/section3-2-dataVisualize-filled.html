@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>ICUデータ可視化</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        import { csv } from "//cdn.skypack.dev/d3-fetch@3";   // 複数CSV読み込み簡略化モジュール
+
+        //時間の補助線
+        import { TimeReferenceLine } from "./modules/module_CreateTimeReferenceLine.js";
+
+        //パラメーター
+        import { staticParameters, guiParameters } from "./modules/parameters.js";
+
+        //文字を表示
+        import { TextSprite } from "./modules/module_TextSprite.js";
+
+
+        // CSV読み込み ------------------------------------------------------------------
+        const k6e_data_fp = "./data/filled_k6eTFGcJxyuRnDeNMT5NwDCvQn8=.csv";
+        //const RIO_data_fp = "./data/filled_RIOkzacHmHz8GhUb2oHUbkzcun0=.csv";
+        const normal_range_data_fp = "./data/vital_v300_normalRanges.csv";
+
+        Promise.all([
+            csv(k6e_data_fp),
+            //csv(RIO_data_fp),
+            csv(normal_range_data_fp)
+        ])
+        .then((filesArray) => {
+            window.csvFilesObj = {
+                k6e: filesArray[0],
+                //RIO: filesArray[0],
+                normalRange: filesArray[1]
+            };
+            console.log(csvFilesObj);
+            
+            loadTexture();
+        })
+        .catch((err) => {
+            // handle error here
+        });
+        // ------------------------------------------------------------------------------
+
+
+        // パーティクル用テクスチャ -------------------------------------------------------
+        function loadTexture() {
+            const getTextures = () =>
+                new Promise((resolve, reject) => {
+                    const loader = new THREE.TextureLoader();
+                    THREE.DefaultLoadingManager.onLoad = () => resolve(textures);
+                    const textures = [
+                        "textures/particles/1.png"
+                    ].map((filename) => loader.load(filename));
+                });
+
+            getTextures().then((textures) => {
+                window.texturesObj = {
+                    particle: textures[0]
+                };
+
+                init();
+            });
+        }
+        // ------------------------------------------------------------------------------
+
+
+
+        let renderer, camera, orbitControls;
+
+        const humanParamObj = {
+            'ART(M)': { pos: [], col: [], threeJsCol: [] },
+            'RESP': { pos: [], col: [], threeJsCol: [] },
+            'SpO2': { pos: [], col: [], threeJsCol: [] },
+            'HR': { pos: [], col: [], threeJsCol: [] },
+            'vtmand_ml': { pos: [], col: [], threeJsCol: [] },
+            'c': { pos: [], col: [], threeJsCol: [] },
+            'r': { pos: [], col: [], threeJsCol: [] },
+        }
+
+
+        // 初期化 ------------------------------------------------------------------
+        function init() {
+            //画面の基本構造を作成
+            initializeScene();
+
+            // ★使用する患者データを変更
+            const patientData = csvFilesObj.k6e;
+            //const patientData = csvFilesObj.RIO;
+            const startDate = patientData[0].datetime;
+            const endDate = patientData[patientData.length - 1].datetime;
+
+
+            // 読み込んだデータから座標などビジュアライズに必要な情報に変換 --------
+            const humanParamKeys = Object.keys(humanParamObj)
+            patientData.forEach(dateTimeData => {
+                humanParamKeys.forEach((key, index) => {
+                    // dateTimeData[key]に値がない場合は適正範囲の中間値を取る
+                    const valueMin = parseFloat(csvFilesObj.normalRange.find(item => item.parameter === key).min);
+                    const valueMax = parseFloat(csvFilesObj.normalRange.find(item => item.parameter === key).max);
+                    if (!dateTimeData[key]) {
+                        dateTimeData[key] = (valueMin + valueMax) / 2;
+                    }
+                    const value = parseFloat(dateTimeData[key]);
+
+                    // 縦に並ぶよう位置座標に変換
+                    const pos = getLinearPos(index, humanParamKeys.length, value, valueMin, valueMax, dateTimeData.datetime, startDate, endDate, staticParameters.width, 1, staticParameters.maxZ);
+                    humanParamObj[key].pos.push(pos);
+                })
+            })
+
+
+
+            //上で変換したデータを基に立体作成 --------
+            const groupArray = [];
+            // オブジェクトの各キーと値を処理
+            Object.keys(humanParamObj).forEach(key => {
+                // 線を引くための頂点情報（ジオメトリ）
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints(humanParamObj[key].pos);
+                
+                // 線に当て込む色定義（マテリアル）
+                const lineMaterial = new THREE.LineBasicMaterial({
+                    color: "rgb(255,255,0)"     // 色 0xffffffでもOK
+                });
+                
+                // 上記を組み合わせて立体線を定義
+                const line = new THREE.Line(lineGeometry, lineMaterial);
+
+                // 頂点に点を追加
+                // 点用のマテリアルを作成
+                const pointMaterial = new THREE.PointsMaterial({
+                    // 一つ一つのサイズ
+                    size: 1.05,
+                    // 色
+                    color: "rgb(255,255,255)",
+                    map: texturesObj.particle,
+                    transparent: true,
+                    opacity: 0.05,
+                    blending: THREE.AdditiveBlending,
+                    depthTest: false,
+                });
+
+                const pointMesh = new THREE.Points(lineGeometry, pointMaterial);
+
+                // lineとpointを表示オブジェクトのグループに追加
+                const group = new THREE.Group();
+                group.add(line, pointMesh);
+
+
+                //文字でデータ名を表示（前）
+                const textSpriteFront = new TextSprite
+                    (humanParamObj[key].pos[0].x,
+                        staticParameters.ringRadius - 1.5,
+                        humanParamObj[key].pos[0].z,
+                        2000,
+                        280,
+                        20,
+                        key
+                    );
+                //文字でデータ名を表示（中間）
+                const textSpriteCenter = new TextSprite
+                    (humanParamObj[key].pos[0].x,
+                        staticParameters.ringRadius - 1.5,
+                        (humanParamObj[key].pos[0].z + humanParamObj[key].pos[humanParamObj[key].pos.length - 1].z) / 2,
+                        2000,
+                        280,
+                        20,
+                        key
+                    );
+
+                //文字でデータ名を表示（後ろ）
+                const textSpriteBack = new TextSprite
+                    (humanParamObj[key].pos[0].x,
+                        staticParameters.ringRadius - 1.5,
+                        humanParamObj[key].pos[humanParamObj[key].pos.length - 1].z,
+                        2000,
+                        280,
+                        20,
+                        key
+                    );
+                group.add(textSpriteFront.sprite, textSpriteCenter.sprite, textSpriteBack.sprite);
+
+                // グループにまとめた表示要素をシーンに追加
+                scene.add(group);
+                groupArray.push(group);
+            });
+
+
+            //タイムライン補助線
+            const timeLine_bottom = new TimeReferenceLine(
+                0.5,
+                "rgb(30,50,70)",
+                1,
+                1,
+                staticParameters.maxZ,
+                new Date(startDate),
+                new Date(endDate),
+                new THREE.Vector3(0, -3, 0),
+                10
+            );
+
+            // 毎フレーム実行するループイベントの読み込み（↓↓で定義）
+            tick();
+            
+            // ウインドウがリサイズされた際の処理
+            window.addEventListener("resize", onWindowResize);
+        }
+        // ------------------------------------------------------------------
+
+
+
+
+        //シーンを整える
+        function initializeScene() {
+            renderer = new THREE.WebGLRenderer();
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x111111, 1);
+            document.getElementById("three-canvas").appendChild(renderer.domElement);
+            window.scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 10);
+            
+            // カメラをマウス操作で制御できるようにする
+            orbitControls = new OrbitControls(camera, renderer.domElement);
+            
+            // 座標軸を表示
+            var axes = new THREE.AxesHelper(100);
+            scene.add(axes);
+        }
+
+
+
+        //アニメーション(毎フレーム時に実行されるループイベント)
+        function tick() {
+
+            renderer.render(scene, camera); // レンダリング
+            requestAnimationFrame(tick);
+
+        }
+
+        //ブラウザのリサイズに対応
+        function onWindowResize() {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        }
+
+
+        // ユーティリティ関係の処理 --------------------------------------------------------
+        //時間を正規化する
+        function normalizeDate(date, min, max) {
+            const n_date = map(
+                new Date(date).getTime(),
+                new Date(min).getTime(),
+                new Date(max).getTime(),
+                0,
+                1
+            );
+            return n_date;
+        }
+        
+        //数値を正規化する
+        function normalizeNumber(number, min, max) {
+            const n_date = map(number, min, max, 0, 1);
+            return n_date;
+        }
+
+        //指定した範囲に値を丸める（processingのmap関数と同じ）　https://twilightdve.hatenablog.com/entry/2014/06/23/142555
+        function map(value, originMin, originMax, targetMin, targetMax) {
+            return (
+                targetMin +
+                (targetMax - targetMin) * ((value - originMin) / (originMax - originMin))
+            );
+        }
+
+        // 座標をスケールする
+        function scalePosition(x, y, z, scaleX, scaleY, scaleZ) {
+            const scaledX = x * scaleX;
+            const scaledY = y * scaleY;
+            const scaledZ = z * scaleZ;
+            return { x: scaledX, y: scaledY, z: scaledZ };
+        }
+
+        // 値が指定した範囲内なら0、maxを超えたら＋、minを下回ったら-にする
+        function shrinkNumberToRange(number, min, max) {
+            if (min <= number && number <= max) {
+                return 0;
+            } else if (number < min) {
+                return number - min;
+
+            } else {
+                return number - max;
+            }
+        }
+
+        // 円周上の任意の点のx,y座標を取得する
+        function getPointOnCircle(cx, cy, r, normalizedValue) {
+            const radian = normalizedValue * 2 * Math.PI;
+            let x = cx + r * Math.cos(radian);
+            let y = cy + r * Math.sin(radian);
+            return { x: x, y: y };
+        }
+
+        //一日の中で何秒目かを返す
+        function getSecondsElapsedInDay(dateTime) {
+            let date = new Date(dateTime);
+            let startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            let secondsElapsed = (date - startOfDay) / 1000;
+            return secondsElapsed;
+        }
+
+
+        //座標を線形にする
+        function getLinearPos(index, paramsLength, value, valueMin, valueMax, date, startDate, endDate, scaleX, scaleY, scaleZ) {
+
+            const x = index / paramsLength;
+            const normalizedValue = normalizeNumber(value, valueMin, valueMax);
+            const y = normalizedValue;
+            const z = normalizeDate(date, startDate, endDate)//dateTimeData.datetime;
+            const pos = scalePosition(x, y, z, scaleX, scaleY, scaleZ);
+            return pos;
+        }
+
+    </script>
+</head>
+
+<body>
+    <!-- <div id = "mouseInfo">
+      マウス操作<br>
+      スクロール：ズームイン・アウト<br>
+      左ドラッグ：回転<br>
+      右ドラック：移動<br>
+    </div> -->
+
+    <div id="three-canvas"></div>
+    <a href="../">サンプルコード一覧へもどる</a>
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+parameter,min,max,unit
+ART(M),70,100,mmHg
+RESP,12,20,/min
+SpO2,95,100,％
+HR,60,100,bpm
+TEMP,36,37,℃
+c,30,80,mL/cmH2O
+r,20,30,mbar/L/s
+vtmand_ml,0,1000,dummy

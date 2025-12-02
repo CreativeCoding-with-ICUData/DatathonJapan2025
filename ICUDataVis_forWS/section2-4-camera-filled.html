@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datathon-Demo</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.170.0/build/three.module.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from "three";
+
+        //出力サイズの設定
+        const width = 800;
+        const height = 500;
+
+        // レンダラーを作成
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#myCanvas')
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // シーンを作成
+        const scene = new THREE.Scene();
+
+        // カメラを作成
+        //PerspectiveCamera(視野角, アスペクト比, 開始距離, 終了距離);
+        const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+
+        // カメラの初期座標を設定（X座標:0, Y座標:0, Z座標:0）
+        camera.position.set(3, 3, 3);
+        // カメラの向きを設定
+        camera.lookAt(new THREE.Vector3(0, 0, 0));//カメラの向くべきベクトルを定義
+
+        // 3D空間内に配置するBox(ジオメトリ)を作成
+        const geometry = new THREE.BoxGeometry(1, 1, 1);//Boxサイズ設定
+        const material = new THREE.MeshStandardMaterial({color: "rgb(0, 0, 255)"});//カラーコードだと{color: 0x0000FF}
+        const box = new THREE.Mesh(geometry, material);
+        scene.add(box);
+
+        // 平行光源を作成（平行光源とは特定の方向から均一に光を照射する光源です。）
+        const light = new THREE.DirectionalLight("rgb(255, 255, 255)");
+        light.intensity = 2; // 光の強さを倍に
+        light.position.set(1, 1, 1); // ライトの方向
+        // シーンに追加
+        scene.add(light);
+
+        // レンダリング
+        renderer.render(scene, camera);
+
+    </script>
+</head>
+<body>
+    <canvas id ="myCanvas"></canvas> 
+    <a href="../">サンプルコード一覧へもどる</a>
+</body>
+</html>
+
