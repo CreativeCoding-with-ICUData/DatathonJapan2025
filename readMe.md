@@ -2,8 +2,10 @@
 *  DatathonJapan2025内ハンズオンセミナー「データ可視化の最前線：生体情報モニターデータを３次元動的可視化でリデザイン」で使用する資料です。
 
 # 環境構築
+*  [HANDS-ON SEMINARS事前準備.pdf](https://github.com/CreativeCoding-with-ICUData/DatathonJapan2025/blob/main/HANDS-ON%20SEMINARS%E4%BA%8B%E5%89%8D%E6%BA%96%E5%82%99.pdf)を参考に準備をお願いします
+*  [VisualStudio Code](https://azure.microsoft.com/ja-jp/products/visual-studio-code)のインストールが必要です（VSCodeと互換性のある[Cursor](https://cursor.com/ja)や使い慣れているウェブ開発ツールでもOK）
 *  VSCodeのエクステンションである「Live Server」をインストール
-*  Ctrl＋Shft＋Pで出てくる候補から「Live Server:Open With Live Server」を選択
+*  ウインドウ右下の「Go Live」ボタン押下、またはCtrl＋Shft＋Pで出てくる候補から「Live Server:Open With Live Server」を選択
 *  自動でブラウザが立ち上がり実行されます
 
 # コードについて
