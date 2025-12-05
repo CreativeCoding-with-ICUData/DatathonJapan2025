@@ -133,7 +133,7 @@
                 
                 // 線に当て込む色定義（マテリアル）
                 const lineMaterial = new THREE.LineBasicMaterial({
-                    color: "rgb(255,255,0)"     // 色 0xffffffでもOK
+                    color: "rgb(255,255,255)"     // 色 0xffffffでもOK
                 });
                 
                 // 上記を組み合わせて立体線を定義
@@ -143,12 +143,12 @@
                 // 点用のマテリアルを作成
                 const pointMaterial = new THREE.PointsMaterial({
                     // 一つ一つのサイズ
-                    size: 1.05,
+                    size: 0.05,
                     // 色
                     color: "rgb(255,255,255)",
                     map: texturesObj.particle,
                     transparent: true,
-                    opacity: 0.05,
+                    opacity: 0.5,
                     blending: THREE.AdditiveBlending,
                     depthTest: false,
                 });

@@ -36,7 +36,7 @@
 
         // 3D空間内に配置するBox(ジオメトリ)を作成
         const geometry = new THREE.BoxGeometry(1, 1, 1);//Boxサイズ設定
-        const material = new THREE.MeshStandardMaterial({color: "rgb(250, 0, 255)"});//カラーコードだと{color: 0x0000FF}
+        const material = new THREE.MeshStandardMaterial({color: "rgb(0, 0, 255)"});//カラーコードだと{color: 0x0000FF}
         const box = new THREE.Mesh(geometry, material);
         scene.add(box);
 
